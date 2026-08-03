@@ -1,0 +1,51 @@
+#include <string.h>
+#include <stdlib.h>
+
+char* addBinary(char* a, char* b) {
+    int len_a = strlen(a);
+    int len_b = strlen(b);
+    
+    /* Max possible length is the longer string length + 1 (for carry) */
+    int max_len = (len_a > len_b ? len_a : len_b) + 1;
+    
+    /* Allocate exact memory needed (+1 for null terminator) */
+    char* res = (char*)malloc((max_len + 1) * sizeof(char));
+    
+    /* Variables declared at top for older C standard compatibility */
+    int i = len_a - 1;
+    int j = len_b - 1;
+    int k = max_len;
+    int carry = 0;
+    int sum;
+
+    /* Set null terminator at the absolute end */
+    res[k] = '\0';
+    k--;
+
+    /* Add from right to left */
+    while (i >= 0 || j >= 0 || carry > 0) {
+        sum = carry;
+
+        if (i >= 0) {
+            sum += (a[i] - '0');
+            i--;
+        }
+        if (j >= 0) {
+            sum += (b[j] - '0');
+            j--;
+        }
+
+        carry = sum / 2;
+        res[k] = (sum % 2) + '0';
+        k--;
+    }
+
+    /* If 'k' didn't make it to -1, we didn't use the first index (no final carry).
+       We return 'res + 1' to skip the unused blank first slot, but we must shift 
+       the data to ensure LeetCode can safely free() the original pointer address. */
+    if (k == 0) {
+        memmove(res, res + 1, max_len);
+    }
+
+    return res;
+}
