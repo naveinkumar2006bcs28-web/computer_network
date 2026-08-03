@@ -1,0 +1,226 @@
+[24bcs053@mepcolinux ex1]$cat count.c
+#include <stdio.h>
+
+int main() {
+    int num;
+    int count = 0;
+
+
+    printf("Enter an integer: ");
+    scanf("%d", &num);
+
+
+    while (num > 0) {
+
+        count += num & 1;
+
+        num >>= 1;
+    }
+
+
+    printf("Number Complement: %d\n", count);
+
+    return 0;
+}
+
+[24bcs053@mepcolinux ex1]$./count
+Enter an integer: 8
+Number Complement: 1
+[24bcs053@mepcolinux ex1]$cat bcount.c
+cat: bcount.c: No such file or directory
+[24bcs053@mepcolinux ex1]$cat countbits.c
+cat: countbits.c: No such file or directory
+[24bcs053@mepcolinux ex1]$cat countbit.c
+#include <stdio.h>
+#include <stdlib.h>
+
+int* countBits(int n, int* returnSize) {
+    int i;
+    int* ans;
+
+    *returnSize = n + 1;
+    ans = (int*)malloc((*returnSize) * sizeof(int));
+
+
+    if (ans == NULL) {
+        return NULL;
+    }
+
+    ans[0] = 0;
+    for (i = 1; i <= n; i++) {
+        ans[i] = ans[i >> 1] + (i & 1);
+    }
+
+    return ans;
+}
+
+int main() {
+    int n;
+    int returnSize;
+    int i;
+    int* result;
+
+
+    printf("Enter an integer n (0 to 100000): ");
+    if (scanf("%d", &n) != 1) {
+        printf("Error: Invalid numeric input.\n");
+        return 1;
+    }
+
+
+    if (n < 0 || n > 100000) {
+        printf("Error: Input out of bounds. Please enter a number between 0 and 100000.\n");
+        return 1;
+    }
+
+    result = countBits(n, &returnSize);
+    if (result == NULL) {
+        printf("Error: Memory allocation failed.\n");
+        return 1;
+    }
+
+
+    printf("[");
+    for (i = 0; i < returnSize; i++) {
+        printf("%d", result[i]);
+        if (i < returnSize - 1) {
+            printf(",");
+        }
+    }
+    printf("]\n");
+
+    free(result);
+    return 0;
+}
+
+[24bcs053@mepcolinux ex1]$./bcount
+Enter an integer n (0 to 100000): 9
+[0,1,1,2,1,2,2,3,1,2]
+[24bcs053@mepcolinux ex1]$ls
+=  a.out  bcount  bit.c  BIT.C  bits  BITS  bits1.c  bits.c  Byt.c  BYTE  byte.c  BYTE.c  bytes  bytes.c  count  countbit1.c  countbit.c  count.c  ex1  xor  xor.c
+[24bcs053@mepcolinux ex1]$cat xor.c
+#include <stdio.h>
+#include <stdlib.h>
+
+/* Definition for Trie Node */
+typedef struct TrieNode {
+    struct TrieNode* children[2];
+} TrieNode;
+
+/* Function to create a new Trie Node */
+TrieNode* createNode() {
+    TrieNode* node = (TrieNode*)malloc(sizeof(TrieNode));
+    node->children[0] = NULL;
+    node->children[1] = NULL;
+    return node;
+}
+
+/* Function to insert a number into the Trie */
+void insert(TrieNode* root, int num) {
+    TrieNode* curr = root;
+    int i;
+
+    for (i = 30; i >= 0; i--) {
+        int bit = (num >> i) & 1;
+        if (!curr->children[bit]) {
+            curr->children[bit] = createNode();
+        }
+        curr = curr->children[bit];
+    }
+}
+
+/* Function to find the maximum XOR for a given number against the Trie */
+int getMaxXOR(TrieNode* root, int num) {
+    TrieNode* curr = root;
+    int maxXOR = 0;
+    int i;
+
+    for (i = 30; i >= 0; i--) {
+        int bit = (num >> i) & 1;
+        int toggleBit = 1 - bit;
+
+        if (curr->children[toggleBit]) {
+            maxXOR |= (1 << i);
+            curr = curr->children[toggleBit];
+        } else {
+            curr = curr->children[bit];
+        }
+    }
+    return maxXOR;
+}
+
+/* Helper function to free Trie memory */
+void freeTrie(TrieNode* root) {
+    if (!root) return;
+    freeTrie(root->children[0]);
+    freeTrie(root->children[1]);
+    free(root);
+}
+
+/* Main logic function to find maximum XOR in the array */
+int findMaximumXOR(int* nums, int numsSize) {
+    TrieNode* root;
+    int globalMax = 0;
+    int i;
+
+    if (numsSize < 2) return 0;
+
+    root = createNode();
+    insert(root, nums[0]);
+
+    for (i = 1; i < numsSize; i++) {
+        int currentMax = getMaxXOR(root, nums[i]);
+        if (currentMax > globalMax) {
+            globalMax = currentMax;
+        }
+        insert(root, nums[i]);
+    }
+
+    freeTrie(root);
+    return globalMax;
+}
+
+int main() {
+    int n;
+    int i;
+    int* nums;
+    int result;
+
+    /* 1. Get array size from user */
+    printf("Enter the number of elements: ");
+    if (scanf("%d", &n) != 1 || n <= 0) {
+        printf("Invalid array size.\n");
+        return 1;
+    }
+
+    /* 2. Dynamically allocate memory for the array */
+    nums = (int*)malloc(n * sizeof(int));
+    if (nums == NULL) {
+        printf("Memory allocation failed.\n");
+        return 1;
+    }
+
+    /* 3. Get array elements from user */
+    printf("Enter %d integers separated by spaces or newlines:\n", n);
+    for (i = 0; i < n; i++) {
+        if (scanf("%d", &nums[i]) != 1) {
+            printf("Invalid input entry.\n");
+            free(nums);
+            return 1;
+        }
+    }
+
+    /* 4. Calculate and display output */
+    result = findMaximumXOR(nums, n);
+    printf("Maximum XOR Result: %d\n", result);
+
+    /* 5. Clean up allocated array memory */
+    free(nums);
+    return 0;
+}
+
+[24bcs053@mepcolinux ex1]$./xor
+Enter the number of elements: 8
+Enter 8 integers separated by spaces or newlines:
+1 2 5 6 8 9 4 3
+Maximum XOR Result: 15
