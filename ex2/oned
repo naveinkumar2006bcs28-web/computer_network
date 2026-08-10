@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <string.h>
+
+void alter_bit(char *binary_str, int target_pos) {
+    // Convert 1-based user input to 0-based array index
+    int idx = target_pos - 1;
+
+    if (binary_str[idx] == '1') {
+        binary_str[idx] = '0';
+    } else if (binary_str[idx] == '0') {
+        binary_str[idx] = '1';
+    }
+}
+
+int main()
+{
+    char payload[100], inbound_msg[100]; // Fixed: Allocated full arrays to avoid memory corruption
+    int k, action_choice, active_bits = 0, scheme_selection;
+    char check_bit;
+
+    printf("Input Binary Stream: ");
+    scanf("%s", payload);
+
+    printf("Select Parity Type:\n");
+    printf("1. Even\n");
+    printf("2. Odd\n");
+    printf("Your Choice: ");
+    scanf("%d", &scheme_selection);
+
+    // Count number of 1's
+    for(k = 0; payload[k] != '\0'; k++)
+    {
+        if(payload[k] == '1')
+            active_bits++;
+    }
+
+    // Generate parity bit
+    if(scheme_selection == 1) // Even Parity
+    {
+        check_bit = (active_bits % 2 == 0) ? '0' : '1';
+    }
+    else // Odd Parity
+    {
+        check_bit = (active_bits % 2 == 0) ? '1' : '0';
+    }
+
+    printf("\nCalculated Parity Bit: %c\n", check_bit);
+
+    // Transmitted data
+    strcat(payload, (char[]){check_bit, '\0'});
+    printf("To inject an error, enter bit position (or 0 to skip): ");
+    scanf("%d", &action_choice);
+    if (action_choice != 0){
+       alter_bit(payload, action_choice);
+    }
+    printf("Sent Stream: %s\n", payload);
+
+    // Receiver side
+    strcpy(inbound_msg, payload);
+    printf("\nArrived Stream: %s\n", inbound_msg);
+
+    active_bits = 0;
+    for(k = 0; inbound_msg[k] != '\0'; k++)
+    {
+        if(inbound_msg[k] == '1')
+            active_bits++;
+    }
+
+    if(scheme_selection == 1) // Even parity check
+    {
+        if(active_bits % 2 == 0)
+            printf("Result: Verification Successful\n");
+        else
+            printf("Result: Anomalous Bits Detected\n");
+    }
+    else // Odd parity check
+    {
+        if(active_bits % 2 != 0)
+            printf("Result: Verification Successful\n");
+        else
+            printf("Result: Anomalous Bits Detected\n");
+    }
+
+    return 0;
+}
