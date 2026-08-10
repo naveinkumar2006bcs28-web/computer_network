@@ -1,0 +1,422 @@
+[24bcs053@mepcolinux leetcode]$cat l1.c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+char* addBinary(char* a, char* b) {
+    int len_a = strlen(a);
+    int len_b = strlen(b);
+
+    // Maximum possible length + 1 for carry
+    int max_len = (len_a > len_b ? len_a : len_b) + 1;
+
+    // Allocate memory for result and null terminator
+    char* result = (char*)malloc((max_len + 1) * sizeof(char));
+    result[max_len] = '\0';
+
+    int i = len_a - 1;
+    int j = len_b - 1;
+    int k = max_len - 1;
+    int carry = 0;
+
+    // Traverse both strings from right to left
+    while (i >= 0 || j >= 0 || carry > 0) {
+        int sum = carry;
+
+        if (i >= 0) {
+            sum += a[i] - '0';
+            i--;
+        }
+
+        if (j >= 0) {
+            sum += b[j] - '0';
+            j--;
+        }
+
+        // Calculate carry and result bit
+        carry = sum / 2;
+        result[k] = (sum % 2) + '0';
+        k--;
+    }
+
+    // Remove unused leading position
+    if (k == 0) {
+        return &result[1];
+    }
+
+    return result;
+}
+
+// Simple test block for verification
+int main() {
+    char a[] = "1010";
+    char b[] = "1011";
+
+    char* sum = addBinary(a, b);
+
+    printf("Binary Sum of %s and %s is: %s\n", a, b, sum);
+
+    return 0;
+}
+[24bcs053@mepcolinux leetcode]$cat l2.c
+#include <stdio.h>
+#include <stdbool.h>
+
+bool hasAlternatingBits(int n) {
+    /*
+     * Step 1: XOR n with n shifted right by 1 bit.
+     * Example: n = 10101
+     *          n >> 1 = 01010
+     *          XOR     = 11111
+     */
+    unsigned int temp = n ^ (n >> 1);
+
+    /*
+     * Step 2: Check whether temp contains all 1s.
+     * If temp = 11111:
+     * temp + 1 = 100000
+     * 11111 & 100000 = 00000
+     */
+    return (temp & (temp + 1)) == 0;
+}
+
+int main() {
+    int test_num1 = 5;  // Binary: 101 (Alternating)
+    int test_num2 = 7;  // Binary: 111 (Not alternating)
+
+    printf("Number %d has alternating bits? %s\n",
+           test_num1,
+           hasAlternatingBits(test_num1) ? "true" : "false");
+
+    printf("Number %d has alternating bits? %s\n",
+           test_num2,
+           hasAlternatingBits(test_num2) ? "true" : "false");
+
+    return 0;
+}
+[24bcs053@mepcolinux leetcode]$cat  l3.c
+#include <stdio.h>
+#include <stdlib.h>
+
+int compare(const void* a, const void* b) {
+    return (*(int*)a - *(int*)b);
+}
+
+int subarrayBitwiseORs(int* arr, int arrSize) {
+    if (arrSize == 0)
+        return 0;
+
+    // Stores all unique overall results found so far
+    int* ans = (int*)malloc(arrSize * 32 * sizeof(int));
+    int ans_size = 0;
+
+    // Stores unique OR results ending at the current index
+    int cur[32];
+    int cur_size = 0;
+
+    for (int i = 0; i < arrSize; i++) {
+        int next_cur[32];
+        int next_cur_size = 0;
+
+        // Subarray starting and ending at index i
+        next_cur[next_cur_size++] = arr[i];
+
+        // Extend previous subarrays with arr[i]
+        for (int j = 0; j < cur_size; j++) {
+            int or_val = cur[j] | arr[i];
+
+            // Add only if it is not a duplicate
+            if (next_cur_size == 0 ||
+                next_cur[next_cur_size - 1] != or_val) {
+                next_cur[next_cur_size++] = or_val;
+            }
+        }
+
+        // Copy next_cur into cur
+        cur_size = next_cur_size;
+
+        for (int j = 0; j < cur_size; j++) {
+            cur[j] = next_cur[j];
+            ans[ans_size++] = cur[j];
+        }
+    }
+
+    // Sort the results
+    qsort(ans, ans_size, sizeof(int), compare);
+
+    // Count unique results
+    int unique_count = 0;
+
+    if (ans_size > 0) {
+        unique_count = 1;
+
+        for (int i = 1; i < ans_size; i++) {
+            if (ans[i] != ans[i - 1]) {
+                unique_count++;
+            }
+        }
+    }
+
+    free(ans);
+
+    return unique_count;
+}
+
+int main() {
+    int arr[] = {1, 2, 4};
+    int size = sizeof(arr) / sizeof(arr[0]);
+
+    int result = subarrayBitwiseORs(arr, size);
+
+    printf("Number of unique subarray bitwise ORs: %d\n", result);
+
+    return 0;
+}
+[24bcs053@mepcolinux leetcode]$cat l4.c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define SEGMENT_SIZE 8
+
+// Function prototypes
+unsigned char compute_ones_complement_sum(const char *data, int num_segments);
+void int_to_binary_str(unsigned char val, char *output);
+
+int main() {
+    char input_data[500];
+    char padded_data[512] = {0};
+    char checksum_str[SEGMENT_SIZE + 1];
+    char transmitted_frame[600] = {0};
+    char received_frame[600] = {0};
+    int error_indices[10];
+    int num_errors = 0;
+
+    printf("=== Dynamic 8-bit Checksum Lab Simulation ===\n");
+    printf("Enter continuous binary data stream: ");
+    scanf("%499s", input_data);
+
+    // Validate input data
+    int input_len = strlen(input_data);
+
+    for (int i = 0; i < input_len; i++) {
+        if (input_data[i] != '0' && input_data[i] != '1') {
+            printf("Error: Invalid binary input. Use only 0 and 1.\n");
+            return 1;
+        }
+    }
+
+    // 1. SENDER: Divide data into fixed-size segments
+    strcpy(padded_data, input_data);
+
+    int remainder = input_len % SEGMENT_SIZE;
+
+    if (remainder != 0) {
+        int padding_needed = SEGMENT_SIZE - remainder;
+
+        for (int i = 0; i < padding_needed; i++) {
+            strcat(padded_data, "0");
+        }
+    }
+
+    int total_len = strlen(padded_data);
+    int num_segments = total_len / SEGMENT_SIZE;
+
+    printf("\n--- Sender Side ---\n");
+    printf("Padded/Structured Data into %d segments:\n", num_segments);
+
+    for (int i = 0; i < num_segments; i++) {
+        printf("  Segment %d: ", i + 1);
+
+        for (int j = 0; j < SEGMENT_SIZE; j++) {
+            printf("%c", padded_data[i * SEGMENT_SIZE + j]);
+        }
+
+        printf("\n");
+    }
+
+    // Compute checksum
+    unsigned char sum_val =
+        compute_ones_complement_sum(padded_data, num_segments);
+
+    unsigned char checksum_val =
+        (unsigned char)(~sum_val & 0xFF);
+
+    int_to_binary_str(checksum_val, checksum_str);
+
+    // Construct transmitted frame
+    sprintf(transmitted_frame, "%s%s",
+            padded_data, checksum_str);
+
+    printf("Calculated Checksum:  %s\n", checksum_str);
+    printf("Transmitted Frame:    %s\n", transmitted_frame);
+
+    // 2. CHANNEL SIMULATION
+    strcpy(received_frame, transmitted_frame);
+
+    int frame_len = strlen(received_frame);
+
+    printf("\n--- Transmission Error Simulation ---\n");
+    printf("How many bits do you want to corrupt/flip? (0 to %d): ",
+           frame_len);
+
+    scanf("%d", &num_errors);
+
+    if (num_errors > 0) {
+        printf("Enter the 0-indexed positions (from 0 to %d) to flip separated by spaces: ",
+               frame_len - 1);
+
+        for (int i = 0; i < num_errors; i++) {
+            scanf("%d", &error_indices[i]);
+
+            if (error_indices[i] >= 0 &&
+                error_indices[i] < frame_len) {
+
+                received_frame[error_indices[i]] =
+                    (received_frame[error_indices[i]] == '0')
+                    ? '1'
+                    : '0';
+            }
+        }
+
+        printf("[Channel] Successfully modified %d bit(s) inside the stream.\n",
+               num_errors);
+    } else {
+        printf("[Channel] Transmitting frame perfectly with no modifications.\n");
+    }
+
+    // 3. RECEIVER
+    printf("\n--- Receiver Side ---\n");
+    printf("Received Frame:       %s\n", received_frame);
+
+    // Include checksum segment
+    int receiver_segments = num_segments + 1;
+
+    unsigned char receiver_sum =
+        compute_ones_complement_sum(received_frame,
+                                     receiver_segments);
+
+    unsigned char verification_result =
+        (unsigned char)(~receiver_sum & 0xFF);
+
+    printf("Receiver Final Sum:   ");
+
+    char rec_sum_str[9];
+
+    int_to_binary_str(receiver_sum, rec_sum_str);
+
+    printf("%s\n", rec_sum_str);
+
+    // Verify checksum
+    if (verification_result == 0) {
+        printf("Verification:         PASS\n");
+        printf("Result:               Transmission is ERROR FREE! Data is intact.\n");
+
+        // Extract original data
+        char extracted_data[500] = {0};
+
+        strncpy(extracted_data,
+                received_frame,
+                total_len);
+
+        printf("Extracted Data:       %s\n", extracted_data);
+    } else {
+        printf("Verification:         FAIL\n");
+        printf("Result:               Transmission is CORRUPTED! Errors detected.\n");
+    }
+
+    return 0;
+}
+
+// Computes the 1's complement summation of sequential 8-bit segments
+unsigned char compute_ones_complement_sum(const char *data,
+                                           int num_segments) {
+    unsigned long sum = 0;
+    char temp_seg[SEGMENT_SIZE + 1];
+
+    for (int i = 0; i < num_segments; i++) {
+        strncpy(temp_seg,
+                data + (i * SEGMENT_SIZE),
+                SEGMENT_SIZE);
+
+        temp_seg[SEGMENT_SIZE] = '\0';
+
+        // Convert binary string to numerical value
+        unsigned long seg_val =
+            strtoul(temp_seg, NULL, 2);
+
+        sum += seg_val;
+
+        // Wrap around carry bits
+        while (sum >> 8) {
+            sum = (sum & 0xFF) + (sum >> 8);
+        }
+    }
+
+    return (unsigned char)(sum & 0xFF);
+}
+
+// Converts integer byte to 8-bit binary string
+void int_to_binary_str(unsigned char val, char *output) {
+    for (int i = 7; i >= 0; i--) {
+        output[7 - i] =
+            (val & (1 << i)) ? '1' : '0';
+    }
+
+    output[8] = '\0';
+}
+[24bcs053@mepcolinux leetcode]$cat l5.c
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
+
+void calculate_the_maximum(int n, int k) {
+    int max_and = 0;
+    int max_or = 0;
+    int max_xor = 0;
+
+    // Nested loops to evaluate all unique pairs (i, j) where i < j
+    for (int i = 1; i <= n; i++) {
+        for (int j = i + 1; j <= n; j++) {
+
+            // Calculate bitwise operations
+            int current_and = i & j;
+            int current_or = i | j;
+            int current_xor = i ^ j;
+
+            // Maximum AND less than k
+            if (current_and < k && current_and > max_and) {
+                max_and = current_and;
+            }
+
+            // Maximum OR less than k
+            if (current_or < k && current_or > max_or) {
+                max_or = current_or;
+            }
+
+            // Maximum XOR less than k
+            if (current_xor < k && current_xor > max_xor) {
+                max_xor = current_xor;
+            }
+        }
+    }
+
+    // Print the final maximum values
+    printf("%d\n", max_and);
+    printf("%d\n", max_or);
+    printf("%d\n", max_xor);
+}
+
+int main() {
+    int n, k;
+
+    // Read n and k
+    if (scanf("%d %d", &n, &k) == 2) {
+        calculate_the_maximum(n, k);
+    }
+
+    return 0;
+}
+[24bcs053@mepcolinux leetcode]$exit
+exit
