@@ -1,0 +1,161 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_BLOCKS 10
+#define BLOCK_LEN 20
+
+void compute_binary_sum(char operand1[], char operand2[], char output_str[], int bit_width)
+{
+    int carry_val = 0, current_sum, idx;
+    for (idx = bit_width - 1; idx >= 0; idx--)
+    {
+        current_sum = (operand1[idx] - '0') + (operand2[idx] - '0') + carry_val;
+        output_str[idx] = (current_sum % 2) + '0';
+        carry_val = current_sum / 2;
+    }
+    while (carry_val)
+    {
+        for (idx = bit_width - 1; idx >= 0; idx--)
+        {
+            current_sum = (output_str[idx] - '0') + carry_val;
+            output_str[idx] = (current_sum % 2) + '0';
+            carry_val = current_sum / 2;
+        }
+    }
+    output_str[bit_width] = '\0';
+}
+
+void invert_bits(char target_str[], int bit_width)
+{
+    int idx;
+    for (idx = 0; idx < bit_width; idx++)
+    {
+        if (target_str[idx] == '0')
+            target_str[idx] = '1';
+        else
+            target_str[idx] = '0';
+    }
+}
+
+int main()
+{
+    int block_count, idx, current_size;
+
+    printf("Enter number of binary data words: ");
+    scanf("%d", &block_count);
+
+    char payload_matrix[MAX_BLOCKS][BLOCK_LEN];
+
+    printf("Enter size of each binary word: ");
+    scanf("%d", &current_size);
+
+    printf("\nEnter Binary Data:\n");
+    for (idx = 0; idx < block_count; idx++)
+    {
+        printf("Data %d: ", idx + 1);
+        scanf("%s", payload_matrix[idx]);
+        if ((int)strlen(payload_matrix[idx]) != current_size)
+        {
+            printf("Invalid word length!\n");
+            return 0;
+        }
+    }
+
+    char running_sum[BLOCK_LEN];
+    strcpy(running_sum, payload_matrix[0]);
+
+    for (idx = 1; idx < block_count; idx++)
+    {
+        char buffer_str[BLOCK_LEN];
+        compute_binary_sum(running_sum, payload_matrix[idx], buffer_str, current_size);
+        strcpy(running_sum, buffer_str);
+    }
+
+    char block_checksum[BLOCK_LEN];
+    strcpy(block_checksum, running_sum);
+    invert_bits(block_checksum, current_size);
+
+    printf("\nCalculated Binary Sum: %s", running_sum);
+    printf("\nGenerated Checksum Block: %s\n", block_checksum);
+
+    // Receiver Side
+    char inbound_matrix[MAX_BLOCKS][BLOCK_LEN];
+    char inbound_checksum[BLOCK_LEN];
+
+    for (idx = 0; idx < block_count; idx++)
+    {
+        strcpy(inbound_matrix[idx], payload_matrix[idx]);
+    }
+    strcpy(inbound_checksum, block_checksum);
+
+    int mode_selection;
+    printf("\nIntroduce Error? (0-No, 1-Yes): ");
+    scanf("%d", &mode_selection);
+
+    if (mode_selection == 1)
+    {
+        int fault_loops;
+        printf("Enter number of bits to flip: ");
+        scanf("%d", &fault_loops);
+
+        while (fault_loops--)
+        {
+            int target_row, target_col;
+            printf("Flip in (1-%d data words, %d for checksum): ", block_count + 1, block_count + 1);
+            scanf("%d", &target_row);
+            printf("Bit Position (1-%d): ", current_size);
+            scanf("%d", &target_col);
+
+            if (target_row <= block_count)
+            {
+                inbound_matrix[target_row - 1][target_col - 1] = (inbound_matrix[target_row - 1][target_col - 1] == '0') ? '1' : '0';
+            }
+            else
+            {
+                inbound_checksum[target_col - 1] = (inbound_checksum[target_col - 1] == '0') ? '1' : '0';
+            }
+        }
+    }
+
+    printf("\n--- Final Transmitted Data Received ---\n");
+    for (idx = 0; idx < block_count; idx++)
+        printf("Data Block %d : %s\n", idx + 1, inbound_matrix[idx]);
+    printf("Checksum Block: %s\n", inbound_checksum);
+
+    char verification_sum[BLOCK_LEN];
+    strcpy(verification_sum, inbound_matrix[0]);
+
+    for (idx = 1; idx < block_count; idx++)
+    {
+        char buffer_str[BLOCK_LEN];
+        compute_binary_sum(verification_sum, inbound_matrix[idx], buffer_str, current_size);
+        strcpy(verification_sum, buffer_str);
+    }
+
+    char buffer_str[BLOCK_LEN];
+    compute_binary_sum(verification_sum, inbound_checksum, buffer_str, current_size);
+    strcpy(verification_sum, buffer_str);
+
+    char final_validation[BLOCK_LEN];
+    strcpy(final_validation, verification_sum);
+    invert_bits(final_validation, current_size);
+
+    int anomalies_found = 0;
+    for (idx = 0; idx < current_size; idx++)
+    {
+        if (final_validation[idx] != '0')
+            anomalies_found = 1;
+    }
+
+    if (anomalies_found)
+    {
+        printf("\nStatus : ERROR DETECTED!\n");
+        printf("Syndrome/Error Pattern: %s\n", final_validation);
+    }
+    else
+    {
+        printf("\nStatus : NO ERROR DETECTED (Data is clean)\n");
+    }
+
+    return 0;
+}
