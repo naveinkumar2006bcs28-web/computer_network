@@ -1,0 +1,146 @@
+#include <stdio.h>
+#include <string.h>
+
+int main()
+{
+    char raw_payload[100], gen_poly[30], processing_str[100], outbound_frame[100], crc_tail[30];
+    int iter_i, iter_j, payload_len, poly_len;
+    int is_poly_good = 1;
+
+    printf("Enter Sender Binary Data: ");
+    scanf("%s", raw_payload);
+
+    printf("Enter Generator Polynomial: ");
+    scanf("%s", gen_poly);
+
+    poly_len = strlen(gen_poly);
+
+    /* Validate Generator Polynomial */
+
+    if(poly_len < 2)
+        is_poly_good = 0;
+
+    if(gen_poly[0] != '1' || gen_poly[poly_len - 1] != '1')
+        is_poly_good = 0;
+
+    for(iter_i = 0; iter_i < poly_len; iter_i++)
+    {
+        if(gen_poly[iter_i] != '0' && gen_poly[iter_i] != '1')
+        {
+            is_poly_good = 0;
+            break;
+        }
+    }
+
+    if(!is_poly_good)
+    {
+        printf("\nGenerator Polynomial is Invalid.\n");
+        printf("Message discarded because the generator polynomial is invalid.\n");
+        return 0;
+    }
+
+    printf("\nGenerator Polynomial is Valid.\n");
+
+    payload_len = strlen(raw_payload);
+
+    strcpy(processing_str, raw_payload);
+
+    for(iter_i = 0; iter_i < poly_len - 1; iter_i++)
+        processing_str[payload_len + iter_i] = '0';
+    processing_str[payload_len + poly_len - 1] = '\0';
+
+    strcpy(outbound_frame, processing_str);
+
+    /* CRC Division */
+
+    for(iter_i = 0; iter_i < payload_len; iter_i++)
+    {
+        if(processing_str[iter_i] == '1')
+        {
+            for(iter_j = 0; iter_j < poly_len; iter_j++)
+            {
+                if(processing_str[iter_i + iter_j] == gen_poly[iter_j])
+                    processing_str[iter_i + iter_j] = '0';
+                else
+                    processing_str[iter_i + iter_j] = '1';
+            }
+        }
+    }
+
+    for(iter_i = 0; iter_i < poly_len - 1; iter_i++)
+        crc_tail[iter_i] = processing_str[payload_len + iter_i];
+
+    crc_tail[poly_len - 1] = '\0';
+
+    strcpy(outbound_frame, raw_payload);
+    strcat(outbound_frame, crc_tail);
+
+    printf("\nCRC Remainder       : %s", crc_tail);
+    printf("\nTransmitted Codeword: %s", outbound_frame);
+
+    /* Receiver Side */
+
+    char inbound_frame[100];
+    strcpy(inbound_frame, outbound_frame);
+
+    int scenario_choice;
+
+    printf("\n\nChoose Testcase");
+    printf("\n0 - Valid");
+    printf("\n1 - Invalid");
+    printf("\nEnter Choice: ");
+    scanf("%d", &scenario_choice);
+
+    if(scenario_choice == 1)
+    {
+        int flip_pos;
+
+        printf("Enter Bit Position to Flip (1-%ld): ", strlen(inbound_frame));
+        scanf("%d", &flip_pos);
+
+        if(flip_pos >= 1 && flip_pos <= (int)strlen(inbound_frame))
+        {
+            if(inbound_frame[flip_pos - 1] == '0')
+                inbound_frame[flip_pos - 1] = '1';
+            else
+                inbound_frame[flip_pos - 1] = '0';
+        }
+    }
+
+    printf("\nReceived Codeword   : %s\n", inbound_frame);
+
+    strcpy(processing_str, inbound_frame);
+
+    for(iter_i = 0; iter_i <= (int)strlen(inbound_frame) - poly_len; iter_i++)
+    {
+        if(processing_str[iter_i] == '1')
+        {
+            for(iter_j = 0; iter_j < poly_len; iter_j++)
+            {
+                if(processing_str[iter_i + iter_j] == gen_poly[iter_j])
+                    processing_str[iter_i + iter_j] = '0';
+                else
+                    processing_str[iter_i + iter_j] = '1';
+            }
+        }
+    }
+
+    printf("Receiver Remainder  : ");
+
+    int structural_fault = 0;
+
+    for(iter_i = (int)strlen(inbound_frame) - poly_len + 1; iter_i < (int)strlen(inbound_frame); iter_i++)
+    {
+        printf("%c", processing_str[iter_i]);
+
+        if(processing_str[iter_i] == '1')
+            structural_fault = 1;
+    }
+
+    if(structural_fault)
+        printf("\nError Detected (Invalid Testcase)\n");
+    else
+        printf("\nNo Error Detected (Valid Testcase)\n");
+
+    return 0;
+}
