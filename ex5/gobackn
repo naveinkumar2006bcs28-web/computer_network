@@ -1,0 +1,162 @@
+#include <stdio.h>
+
+#define MAX 50
+
+/* Go-Back-N */
+void goBackN(int n, int w, int error, int type)
+{
+    int base = 0, i;
+
+    printf("\n--- GO-BACK-N ---\n");
+
+    while (base < n)
+    {
+        printf("\nWindow: ");
+
+        for (i = base; i < base + w && i < n; i++)
+            printf("%d ", i);
+
+        printf("\n");
+
+        /* Send frames */
+        for (i = base; i < base + w && i < n; i++)
+        {
+            printf("Sending Frame %d\n", i);
+
+            if (i == error)
+            {
+                printf("Frame %d %s\n",
+                       i, type == 1 ? "lost" : "corrupted");
+                printf("ACK not received\n");
+                break;
+            }
+
+            printf("Frame %d received -> ACK %d\n", i, i + 1);
+        }
+
+        /* Retransmit from error frame */
+        if (i == error)
+        {
+            printf("TIMEOUT: Frame %d\n", error);
+            printf("Retransmitting from Frame %d\n", error);
+
+            for (i = error; i < base + w && i < n; i++)
+                printf("Retransmitting Frame %d -> ACK %d\n",
+                       i, i + 1);
+
+            error = -1;
+        }
+
+        base += w;
+    }
+
+    printf("\nTransmission completed.\n");
+}
+
+
+/* Selective Repeat */
+void selectiveRepeat(int n, int w, int error, int type)
+{
+    int base = 0, i;
+
+    printf("\n--- SELECTIVE REPEAT ---\n");
+
+    while (base < n)
+    {
+        printf("\nWindow: ");
+
+        for (i = base; i < base + w && i < n; i++)
+            printf("%d ", i);
+
+        printf("\n");
+
+        /* Send frames */
+        for (i = base; i < base + w && i < n; i++)
+        {
+            printf("Sending Frame %d\n", i);
+
+            if (i == error)
+            {
+                printf("Frame %d %s\n",
+                       i, type == 1 ? "lost" : "corrupted");
+                printf("ACK not received\n");
+            }
+            else
+            {
+                printf("Frame %d received -> ACK %d\n",
+                       i, i + 1);
+            }
+        }
+
+        /* Retransmit only error frame */
+        if (error >= base && error < base + w)
+        {
+            printf("TIMEOUT: Frame %d\n", error);
+            printf("Retransmitting only Frame %d\n", error);
+            printf("Frame %d received -> ACK %d\n",
+                   error, error + 1);
+
+            error = -1;
+        }
+
+        base += w;
+    }
+
+    printf("\nTransmission completed.\n");
+}
+
+
+/* Main */
+int main()
+{
+    int choice, n, w;
+    int error, type = 0;
+
+    printf("=== SLIDING WINDOW ===\n");
+    printf("1. Go-Back-N\n");
+    printf("2. Selective Repeat\n");
+
+    printf("Enter choice: ");
+    scanf("%d", &choice);
+
+    printf("Enter number of frames: ");
+    scanf("%d", &n);
+
+    printf("Enter window size: ");
+    scanf("%d", &w);
+
+    printf("Enter error frame (-1 for no error): ");
+    scanf("%d", &error);
+
+    if (error != -1)
+    {
+        printf("1. Lost\n");
+        printf("2. Corrupted\n");
+        printf("Enter error type: ");
+        scanf("%d", &type);
+    }
+
+    /* Input validation */
+    if (n <= 0 || n > MAX || w <= 0 || w > n)
+    {
+        printf("Invalid input!\n");
+        return 0;
+    }
+
+    if (error >= n)
+    {
+        printf("Invalid frame number!\n");
+        return 0;
+    }
+
+    if (choice == 1)
+        goBackN(n, w, error, type);
+
+    else if (choice == 2)
+        selectiveRepeat(n, w, error, type);
+
+    else
+        printf("Invalid choice!\n");
+
+    return 0;
+}
